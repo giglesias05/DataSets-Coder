@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Informe Global por Zona - v6</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/x-icon" href="https://www.lasegunda.com.ar/favicon.ico">
+
+    <style>
+        html { scroll-behavior: smooth; }
+        body { font-family: 'Sora', sans-serif; background-color: #FFFFFF; color: #1F2937; padding-bottom: 4rem; }
+        header { position: sticky; top: 0; z-index: 50; background-color: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .nav-link { padding: 0.5rem 0.75rem; border-radius: 0.375rem; transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out; color: #4B5563; font-size: 0.8rem; cursor: pointer; white-space: nowrap; }
+        .nav-link:hover, .nav-link.active { background-color: #DC2626; color: #FFFFFF; }
+        h1, h2 { color: #DC2626; }
+
+        /* Estilos del Filtro Global */
+        .global-filter-section { padding: 1.5rem 1.5rem 0 1.5rem; background-color: #F9FAFB; border-bottom: 1px solid #E5E7EB; }
+        .filter-controls { display: flex; flex-direction: column; md:flex-direction: row; gap: 1rem; background-color: #FFFFFF; padding: 1rem; border-radius: 0.5rem; border: 1px solid #E5E7EB; }
+        .search-reset { flex-shrink: 0; width: 100%; md:width: 250px; }
+        .search-box { width: 100%; padding: 0.5rem; margin-bottom: 1rem; border: 1px solid #D1D5DB; border-radius: 0.375rem; font-size: 0.875rem; }
+        .reset-button { background-color: #6B7280; color: white; padding: 0.5rem 1rem; border-radius: 0.375rem; text-align: center; cursor: pointer; transition: background-color 0.2s; font-size: 0.875rem; border: none; width: 100%; }
+        .reset-button:hover { background-color: #4B5563; }
+        .checkboxes-container { flex-grow: 1; display: grid; grid-template-columns: repeat(2, 1fr); md:grid-template-columns: repeat(4, 1fr); lg:grid-template-columns: repeat(6, 1fr); gap: 0.5rem; max-height: 150px; overflow-y: auto; border: 1px solid #E5E7EB; padding: 0.75rem; }
+        .checkboxes-container label { display: block; font-size: 0.8rem; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .checkboxes-container input { margin-right: 0.5rem; cursor: pointer; }
+
+        /* Estilos de Secciones de Datos */
+        .section { padding: 3rem 1.5rem; border-bottom: 1px solid #E5E7EB; }
+        .section:last-child { border-bottom: none; }
+        .chart-container-main { position: relative; width: 100%; height: 50vh; max-height: 500px; padding: 1rem; background-color: #F9FAFB; border-radius: 0.5rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); margin-bottom: 1.5rem; }
+        .table-container { position: relative; width: 100%; height: 40vh; /* Un poco más de altura */ max-height: 450px; padding: 1rem; background-color: #F9FAFB; border-radius: 0.5rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); overflow: auto; }
+        .bar-chart-container { position: relative; width: 100%; height: 70vh; max-height: 700px; padding: 1rem; background-color: #F9FAFB; border-radius: 0.5rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+        .table-custom { width: 100%; border-collapse: separate; border-spacing: 0; }
+        .table-custom th, .table-custom td { padding: 0.5rem 0.75rem; border: 1px solid #D1D5DB; text-align: right; font-size: 0.875rem; white-space: nowrap; }
+        .table-custom th { background-color: #F3F4F6; color: #374151; font-weight: 600; text-align: center; position: sticky; top: 0; z-index: 10; }
+        .table-custom td.row-header { text-align: left; font-weight: 600; background-color: #F9FAFB; position: sticky; left: 0; z-index: 5; }
+
+        .pdf-button { background-color: #DC2626; color: white; padding: 0.5rem 1rem; border-radius: 0.375rem; text-align: center; cursor: pointer; transition: background-color 0.2s; font-size: 0.8rem; border: none; margin-left: auto; }
+        .pdf-button:hover { background-color: #B91C1C; }
+
+        @media print { /* Estilos de impresión ... */ }
+
+    </style>
+</head>
+<body>
+    <header>
+       <nav class="container mx-auto px-4 py-3 flex items-center">
+           <img src="https://storage.googleapis.com/l2-designsystem-prod/logos-brand/SVG/l2-logo-hor-rbg-pos.svg" alt="Logo La Segunda" class="h-8 sm:h-10 mr-3">
+            <div class="flex flex-wrap justify-center flex-grow">
+                <a href="#evolucionVehiculos" class="nav-link">Evolución Vehículos</a>
+                <a href="#localidadesPlan" class="nav-link">Localidades</a>
+            </div>
+            <button id="btnPrintPDF" class="pdf-button">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline-block mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                Descargar PDF
+            </button>
+       </nav>
+    </header>
+
+    <section id="filtroGlobal" class="global-filter-section container mx-auto">
+         <h3 class="text-xl font-semibold mb-3 text-gray-800">Selección de Zonas</h3>
+         <div class="filter-controls">
+            <div class="search-reset">
+                 <input type="text" id="searchZonas" class="search-box" placeholder="Buscar zona...">
+                 <button id="btnRestablecer" class="reset-button">Restablecer (Top 5)</button>
+            </div>
+            <div id="checkboxesDiv" class="checkboxes-container">
+               </div>
+         </div>
+     </section>
+
+    <section id="evolucionVehiculos" class="section container mx-auto">
+        <h2 class="text-3xl font-bold mb-6 text-center">Evolución de Vehículos Vigentes</h2>
+        <div>
+            <div class="chart-container-main">
+                <canvas id="graficoEvolucionVehiculos"></canvas>
+            </div>
+            <div class="table-container">
+                <table id="tablaDatosVehiculos" class="table-custom"></table>
+            </div>
+        </div>
+    </section>
+
+    <section id="localidadesPlan" class="section container mx-auto">
+        <h2 class="text-3xl font-bold mb-6 text-center">Cantidad de Localidades Alcanzadas</h2>
+        <div class="bar-chart-container">
+            <canvas id="graficoLocalidades"></canvas>
+        </div>
+    </section>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            Chart.defaults.font.family = "'Sora', sans-serif";
+            Chart.register(ChartDataLabels);
+            Chart.defaults.set('plugins.datalabels', { color: '#FFFFFF', anchor: 'end', align: 'start', offset: -20, font: { weight: 'bold', size: 10 }, formatter: value => value.toLocaleString('es-AR') });
+
+            // --- DATOS ---
+            const periodosVehiculos = ["12/2024", "1/2025", "2/2025", "3/2025", "4/2025"];
+            const datosCompletosVehiculos = { "70 - ZONA COMODORO RIVADAVIA": [31550, 32039, 32316, 32224, 32121], "76 - RINAUDO, ADRIAN FEDERICO": [12044, 12278, 12339, 12360, 12361], "43 - MANSILLA Y ASOCIADOS SOC.COLEC": [16438, 16486, 16496, 16570, 16613], "39 - ZONA ROSARIO METROPOLITANA": [46464, 46400, 46330, 46215, 46222], "14 - MUÑOZ, SERGIO OSCAR": [7554, 7563, 7626, 7620, 7639], "80 - MORENO, RAUL EDUARDO": [9242, 9315, 9388, 9343, 9371], "8 - FANUCCHI, MARCOS LEANDRO": [16245, 16330, 16317, 16402, 16419], "74 - ZONA TANDIL": [15734, 15851, 16001, 15988, 15996], "86 - MARENGO, JOSE MARIA": [14574, 14638, 14738, 14665, 14710], "88 - VENIER, JAVIER ALFREDO": [9578, 9605, 9686, 9632, 9590], "37 - NOVAIRA Y CIA SOCIEDAD COLECTIVA": [28512, 28710, 28805, 28674, 28572], "72 - ZONA RIO GALLEGOS": [9600, 9707, 9745, 9728, 9699], "56 - LANDINI, MIRKO IVAN": [8253, 8276, 8296, 8340, 8351], "21 - ZONA BUENOS AIRES": [51275, 52292, 52896, 53096, 54444], "54 - ZONA PIGUE": [11644, 11730, 11800, 11785, 11719], "96 - ISAGUIRRE, RAUL ANDRES": [17774, 17876, 17864, 17835, 17833], "97 - ESPELUSE Y CIA.SOC.COL.": [17323, 17433, 17539, 17443, 17366], "84 - ZONA CONCORDIA": [11269, 11290, 11270, 11200, 11219], "67 - ZAMUDIO, MARCELO ALEJANDRO": [11250, 11333, 11294, 11218, 11118], "6 - ZONA CORRIENTES": [11864, 11935, 11937, 11738, 11614], "57 - ZONA SAN NICOLAS": [8183, 8232, 8324, 8357, 8430], "35 - BOCA, ANDRES MARCELO": [12291, 12380, 12415, 12370, 12323], "64 - GEMBAROWSKI, ALEJANDRO JAVIER": [9382, 9377, 9355, 9339, 9337], "12 - HABBABY, CHRISTIAN LUIS": [7705, 7865, 7874, 7855, 7904], "42 - ZONA PARANA": [12970, 13078, 13047, 13026, 13022], "91 - ZONA BARILOCHE": [11107, 11228, 11330, 11347, 11377], "30 - ZONA MARCOS JUAREZ": [8698, 8743, 8729, 8742, 8740], "46 - ZONA MENDOZA": [19487, 19530, 19609, 19499, 19561], "32 - ZONA RECONQUISTA": [7741, 7768, 7738, 7685, 7668], "66 - ZONA SAN LUIS": [9617, 9750, 9927, 9887, 9869], "51 - PORTA Y PORTA S.C.": [7870, 7922, 7935, 7946, 7924], "61 - ROBERTO NOCETTI Y DANIEL NOCETTI S.C.": [21805, 21819, 22034, 22181, 22216], "25 - HERNANDEZ, LEONARDO JUAN": [14459, 14610, 14647, 14636, 14659], "60 - ZONA CASILDA": [7759, 7824, 7833, 7854, 7865], "2 - ZONA TUCUMAN": [7682, 7722, 7714, 7694, 7634], "47 - PRESTIFILIPPO, SERGIO ALBERTO": [20056, 20269, 20311, 20148, 20014], "62 - ZONA SAN JUAN": [3579, 3682, 3740, 3789, 3790], "95 - ZONA SALTA Y JUJUY": [4762, 4908, 5077, 5165, 5192] };
+            const datosLocalidades = { "21 - ZONA BUENOS AIRES": 48, "25 - HERNANDEZ, LEONARDO JUAN": 36, "37 - NOVAIRA Y CIA SOCIEDAD COLECTIVA": 33, "47 - PRESTIFILIPPO, SERGIO ALBERTO": 31, "61 - ROBERTO NOCETTI Y DANIEL NOCETTI S.C.": 29, "54 - ZONA PIGUE": 23, "35 - BOCA, ANDRES MARCELO": 22, "46 - ZONA MENDOZA": 22, "76 - RINAUDO, ADRIAN FEDERICO": 20, "70 - ZONA COMODORO RIVADAVIA": 18, "84 - ZONA CONCORDIA": 18, "91 - ZONA BARILOCHE": 18, "74 - ZONA TANDIL": 17, "96 - ISAGUIRRE, RAUL ANDRES": 17, "6 - ZONA CORRIENTES": 17, "95 - ZONA SALTA Y JUJUY": 17, "30 - ZONA MARCOS JUAREZ": 16, "2 - ZONA TUCUMAN": 16, "8 - FANUCCHI, MARCOS LEANDRO": 15, "88 - VENIER, JAVIER ALFREDO": 15, "97 - ESPELUSE Y CIA.SOC.COL.": 15, "57 - ZONA SAN NICOLAS": 8, "42 - ZONA PARANA": 15, "60 - ZONA CASILDA": 15, "56 - LANDINI, MIRKO IVAN": 14, "80 - MORENO, RAUL EDUARDO": 13, "86 - MARENGO, JOSE MARIA": 13, "64 - GEMBAROWSKI, ALEJANDRO JAVIER": 13, "67 - ZAMUDIO, MARCELO ALEJANDRO": 11, "39 - ZONA ROSARIO METROPOLITANA": 10, "66 - ZONA SAN LUIS": 10, "51 - PORTA Y PORTA S.C.": 10, "72 - ZONA RIO GALLEGOS": 9, "12 - HABBABY, CHRISTIAN LUIS": 9, "32 - ZONA RECONQUISTA": 9, "14 - MUÑOZ, SERGIO OSCAR": 7, "62 - ZONA SAN JUAN": 6, "43 - MANSILLA Y ASOCIADOS SOC.COLEC": 5 };
+            const zonasTodas = Object.keys(datosCompletosVehiculos).sort();
+            const nTop = 5;
+            const coloresZonas = ['#DC2626', '#3B82F6', '#16A34A', '#F97316', '#8B5CF6', '#6B7280', '#EC4899', '#F59E0B', '#10B981', '#6366F1'];
+
+            // --- ELEMENTOS DEL DOM ---
+            const btnPrintPDF = document.getElementById('btnPrintPDF');
+            const checkboxesDiv = document.getElementById('checkboxesDiv');
+            const searchInput = document.getElementById('searchZonas');
+            const btnRestablecer = document.getElementById('btnRestablecer');
+            const tablaDatosEl = document.getElementById('tablaDatosVehiculos');
+            const ctxVehiculos = document.getElementById('graficoEvolucionVehiculos').getContext('2d');
+            const ctxLocalidades = document.getElementById('graficoLocalidades').getContext('2d');
+            let graficoVehiculosChart, graficoLocalidadesChart, zonasTopN;
+
+            // --- FUNCIONES (Sin cambios, solo las importantes para referencia) ---
+             function formatNumber(num) { return num.toLocaleString('es-AR'); }
+             function calcularTopN() { const z = Object.keys(datosCompletosVehiculos).map(zona => ({ nombre: zona, valor: datosCompletosVehiculos[zona][datosCompletosVehiculos[zona].length - 1] })); z.sort((a, b) => b.valor - a.valor); zonasTopN = z.slice(0, nTop).map(z => z.nombre); }
+             function aplicarSeleccionTopN() { checkboxesDiv.querySelectorAll('.filtro-zona').forEach(checkbox => { checkbox.checked = zonasTopN.includes(checkbox.value); }); }
+             function crearFiltro() { checkboxesDiv.innerHTML = ''; zonasTodas.forEach(zona => { const div = document.createElement('div'); const checkbox = document.createElement('input'); checkbox.type = 'checkbox'; checkbox.id = `check-${zona.replace(/[^a-zA-Z0-9]/g, '')}`; checkbox.value = zona; checkbox.className = 'filtro-zona'; const label = document.createElement('label'); label.htmlFor = checkbox.id; label.textContent = zona; label.title = zona; div.appendChild(checkbox); div.appendChild(label); checkboxesDiv.appendChild(div); checkbox.addEventListener('change', actualizarTodo); }); }
+             function filtrarCheckboxes() { const f = searchInput.value.toLowerCase(); checkboxesDiv.querySelectorAll('label').forEach(l => { l.parentNode.style.display = l.textContent.toLowerCase().includes(f) ? 'block' : 'none'; }); }
+             function actualizarTablaVehiculos(zs) { let h = '<thead><tr><th class="row-header">Zona</th>'; periodosVehiculos.forEach(p => { h += `<th>${p}</th>`; }); h += '</tr></thead><tbody>'; zs.forEach(z => { h += `<tr><td class="row-header">${z}</td>`; datosCompletosVehiculos[z].forEach(v => { h += `<td>${formatNumber(v)}</td>`; }); h += '</tr>'; }); h += '</tbody>'; tablaDatosEl.innerHTML = h; }
+             function actualizarGraficoVehiculos(zs) { const d = zs.map((z) => { const i = zonasTodas.indexOf(z); return { label: z, data: datosCompletosVehiculos[z], borderColor: coloresZonas[i % coloresZonas.length], backgroundColor: coloresZonas[i % coloresZonas.length], tension: 0.1, fill: false, borderWidth: 2, pointRadius: 3 }; }); if (graficoVehiculosChart) { graficoVehiculosChart.data.datasets = d; graficoVehiculosChart.update(); } else { inicializarGraficoVehiculos(d); } }
+             function actualizarGraficoLocalidades(zs) { const dF = zs.map(z => ({ zona: z, cantidad: datosLocalidades[z] || 0 })).filter(i => i.cantidad > 0).sort((a, b) => b.cantidad - a.cantidad); const l = dF.map(i => i.zona); const d = dF.map(i => i.cantidad); if (graficoLocalidadesChart) { graficoLocalidadesChart.data.labels = l; graficoLocalidadesChart.data.datasets[0].data = d; graficoLocalidadesChart.update(); } else { inicializarGraficoLocalidades(l, d); } }
+             function inicializarGraficoVehiculos(dI) { graficoVehiculosChart = new Chart(ctxVehiculos, { type: 'line', data: { labels: periodosVehiculos, datasets: dI }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: false } }, plugins: { legend: { position: 'top' }, tooltip: { mode: 'index', intersect: false }, datalabels: { display: false } } } }); }
+             function inicializarGraficoLocalidades(l, d) { graficoLocalidadesChart = new Chart(ctxLocalidades, { type: 'bar', data: { labels: l, datasets: [{ label: 'Cantidad', data: d, backgroundColor: 'rgba(59, 130, 246, 0.7)', borderColor: 'rgba(59, 130, 246, 1)', borderWidth: 1 }] }, options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, scales: { x: { beginAtZero: true } }, plugins: { legend: { display: false }, datalabels: { color: '#333', anchor: 'end', align: 'end', offset: 5, font: { size: 9 } } } } }); }
+             function actualizarTodo() { const c = document.querySelectorAll('.filtro-zona:checked'); const z = Array.from(c).map(cb => cb.value); actualizarGraficoVehiculos(z); actualizarTablaVehiculos(z); actualizarGraficoLocalidades(z); }
+
+            // --- INICIAR ---
+            calcularTopN();
+            crearFiltro();
+            aplicarSeleccionTopN();
+            actualizarTodo();
+            searchInput.addEventListener('keyup', filtrarCheckboxes);
+            btnRestablecer.addEventListener('click', () => { aplicarSeleccionTopN(); actualizarTodo(); });
+            btnPrintPDF.addEventListener('click', () => { window.print(); });
+
+            // --- NAVEGACIÓN ---
+            const navLinks = document.querySelectorAll('.nav-link');
+            navLinks.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    navLinks.forEach(l => l.classList.remove('active'));
+                    link.classList.add('active');
+                    const targetId = link.getAttribute('href');
+                    const targetElement = document.querySelector(targetId);
+                    if (targetElement) {
+                         const headerOffset = document.querySelector('header').offsetHeight + document.querySelector('#filtroGlobal').offsetHeight;
+                         const elementPosition = targetElement.getBoundingClientRect().top;
+                         const offsetPosition = elementPosition + window.pageYOffset - headerOffset - 20;
+                         window.scrollTo({ top: offsetPosition, behavior: "smooth" });
+                    }
+                });
+            });
+        });
+    </script>
+
+</body>
+</html>
